@@ -1,0 +1,23 @@
+name: ForceMinecraft
+load: STARTUP
+version: 1.0.0
+main: de.miraculixx.forcemc.ForceMinecraft
+api-version: 1.18
+authors: [ Miraculixx ]
+description: Collect everything in minecraft to became a true Minecrafter B)
+website: https://mutils.de/
+libraries:
+  - "net.axay:kspigot:1.19.0"
+  - "org.jetbrains.kotlin:kotlin-stdlib:1.7.10"
+  - "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0"
+  - "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0"
+  - "org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2"
+  - "net.kyori:adventure-api:4.11.0"
+  - "net.kyori:adventure-text-minimessage:4.11.0"
+  - "net.kyori:adventure-text-serializer-plain:4.11.0"
+
+commands:
+  skip:
+    description: Skip the current goal
+  forcemc:
+    description: Main command to start or stop the hunt

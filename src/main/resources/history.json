@@ -1,0 +1,20 @@
+{
+  "items": [
+    "STONE",
+    "BREAD"
+  ],
+
+  "mobs": [
+    "CREEPER",
+    "ZOMBIE"
+  ],
+
+  "advancements": [
+    "GOING_DEEPER",
+    "THE_END?"
+  ],
+
+  "sounds": [
+    "???"
+  ]
+}
