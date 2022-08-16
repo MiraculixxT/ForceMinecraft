@@ -17,11 +17,65 @@ import java.util.*
 import kotlin.io.path.Path
 
 object ForceManager {
-    private val items = ProgressSave<Material>()
-    private val mobs = ProgressSave<EntityType>()
-    private val advancements = ProgressSave<Advancement>()
-    private val sounds = ProgressSave<Sound>()
+    val items = ProgressSave<Material>()
+    val mobs = ProgressSave<EntityType>()
+    val advancements = ProgressSave<Advancement>()
+    val sounds = ProgressSave<Sound>()
 
+    var currentGoal = "waiting..."
+    private var currentType = SearchType.ITEM
+    private var currentEvent: Event? = null
+
+    fun next() {
+        currentEvent.unregister()
+        when (currentType) {
+            SearchType.ITEM -> {
+                val value = Material.fromString(currentGoal)
+                items.remaining.remove(value)
+                items.finished.add(value)
+            }
+            SearchType.MOB -> {
+                val value = EntityType.valueOf(currentGoal)
+                mobs.remaining.remove(value)
+                mobs.finished.add(value)
+            }
+            SearchType.ADVANCEMENT -> {
+                val value = Bukkit.getAdvancement(NamespacedKey(currentGoal))
+                mobs.remaining.remove(value)
+                mobs.finished.add(value)
+            }
+            SearchType.SOUND -> {
+                val value = Sound.valueOf(currentGoal)
+                sounds.remaining.remove(value)
+                sound.finished.add(value)
+            }
+        }
+        val finishedTypes = buildList {
+            if (items.remaining.isEmpty()) add(SearchType.ITEM)
+            if (mobs.remaining.isEmpty()) add(SearchType.MOB)
+            if (advancements.remaining.isEmpty()) add(SearchType.ADVANCEMENT)
+            if (sounds.remaining.isEmpty()) add(SearchType.SOUND)
+        }
+        currentType = SearchType.values().filter { !finishedTypes.contains(it) }.random()
+        currentGoal = when (currentType) {
+            SearchType.ITEM -> {
+                currentEvent = ItemGathering()
+                items.remaining.random().name
+            }
+            SearchType.MOB -> {
+                currentEvent = MobKill()
+                mobs.remaining.random().name
+            }
+            SearchType.ADVANCEMENT -> {
+                currentEvent = 
+                advancements.remaining.random().key.key
+            }
+            SearchType.SOUND -> {
+                currentEvent = HearingSound()
+                sounds.remaining.random().name
+            }
+        }
+    }
 
     private fun fill() {
         items.remaining.addAll(

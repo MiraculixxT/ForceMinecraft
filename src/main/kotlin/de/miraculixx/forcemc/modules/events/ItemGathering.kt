@@ -1,9 +1,8 @@
 package de.miraculixx.forcemc.modules.events
 
 import net.axay.kspigot.event.listen
-import org.bukkit.event.player.PlayerAdvancementDoneEvent
 
-class GrantAdvancement: Event {
+class ItemGathering: Event {
     override fun register() {
         onAdvancement.register()
     }
@@ -12,8 +11,8 @@ class GrantAdvancement: Event {
         onAdvancement.unregister()
     }
 
-    val onAdvancement = listen<PlayerAdvancementDoneEvent> {
-        if (ForceManager.currentGoal == it.advancement.key.key) {
+    val onAdvancement = listen<PlayerPickupItemEvent> {
+        if (ForceManager.currentGoal == it.item.type) {
             ForceManager.next()
         }
     }
