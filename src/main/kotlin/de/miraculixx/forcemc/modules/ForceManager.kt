@@ -1,13 +1,20 @@
 package de.miraculixx.forcemc.modules
 
+import de.miraculixx.forcemc.modules.data.Event
 import de.miraculixx.forcemc.modules.data.JsonFormat
 import de.miraculixx.forcemc.modules.data.ProgressSave
+import de.miraculixx.forcemc.modules.data.SearchType
+import de.miraculixx.forcemc.modules.events.GrantAdvancement
+import de.miraculixx.forcemc.modules.events.HearingSound
+import de.miraculixx.forcemc.modules.events.ItemGathering
+import de.miraculixx.forcemc.modules.events.MobKill
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.axay.kspigot.extensions.console
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.advancement.Advancement
 import org.bukkit.entity.EntityType
@@ -22,15 +29,15 @@ object ForceManager {
     val advancements = ProgressSave<Advancement>()
     val sounds = ProgressSave<Sound>()
 
-    var currentGoal = "waiting..."
-    private var currentType = SearchType.ITEM
-    private var currentEvent: Event? = null
+    var currentGoal = "error"
+    var currentEvent: Event? = null
+    var currentType = SearchType.NOTHING
 
     fun next() {
-        currentEvent.unregister()
+        currentEvent?.unregister()
         when (currentType) {
             SearchType.ITEM -> {
-                val value = Material.fromString(currentGoal)
+                val value = Material.valueOf(currentGoal)
                 items.remaining.remove(value)
                 items.finished.add(value)
             }
@@ -40,15 +47,16 @@ object ForceManager {
                 mobs.finished.add(value)
             }
             SearchType.ADVANCEMENT -> {
-                val value = Bukkit.getAdvancement(NamespacedKey(currentGoal))
-                mobs.remaining.remove(value)
-                mobs.finished.add(value)
+                val value = Bukkit.getAdvancement(NamespacedKey("minecraft", currentGoal)) ?: return
+                advancements.remaining.remove(value)
+                advancements.finished.add(value)
             }
             SearchType.SOUND -> {
                 val value = Sound.valueOf(currentGoal)
                 sounds.remaining.remove(value)
-                sound.finished.add(value)
+                sounds.finished.add(value)
             }
+            SearchType.NOTHING -> {}
         }
         val finishedTypes = buildList {
             if (items.remaining.isEmpty()) add(SearchType.ITEM)
@@ -67,17 +75,30 @@ object ForceManager {
                 mobs.remaining.random().name
             }
             SearchType.ADVANCEMENT -> {
-                currentEvent = 
+                currentEvent = GrantAdvancement()
                 advancements.remaining.random().key.key
             }
             SearchType.SOUND -> {
                 currentEvent = HearingSound()
                 sounds.remaining.random().name
             }
+            SearchType.NOTHING -> { "error" }
         }
     }
 
-    private fun fill() {
+    fun start(): Boolean {
+        if (currentGoal == "error") next()
+        else if (currentEvent == null) currentEvent = when (currentType) {
+            SearchType.ITEM -> ItemGathering()
+            SearchType.MOB -> MobKill()
+            SearchType.ADVANCEMENT -> GrantAdvancement()
+            SearchType.SOUND -> HearingSound()
+            SearchType.NOTHING -> return false
+        } else return false
+        return true
+    }
+
+    fun fill() {
         items.remaining.addAll(
             Material.values().filter {
                 (it.creativeCategory != null && it != Material.DRAGON_HEAD) ||

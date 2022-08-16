@@ -1,5 +1,5 @@
 package de.miraculixx.forcemc.modules.data
 
 enum class SearchType {
-    ITEM, MOB, ADVANCEMENT, SOUND
+    ITEM, MOB, ADVANCEMENT, SOUND, NOTHING
 }

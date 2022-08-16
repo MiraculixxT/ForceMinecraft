@@ -1,5 +1,6 @@
 package de.miraculixx.forcemc.modules.events
 
+import de.miraculixx.forcemc.modules.data.Event
 import net.axay.kspigot.event.listen
 
 class HearingSound: Event {
