@@ -11,4 +11,8 @@ class HearingSound: Event {
     override fun unregister() {
         onAdvancement.unregister()
     }
+
+    private val onEntityDamage = listen<EntityDamageEvent> {
+        // Entity Damage & Entity Death 
+    }
 }

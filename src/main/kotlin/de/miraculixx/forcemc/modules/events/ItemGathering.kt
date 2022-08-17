@@ -10,15 +10,24 @@ import org.bukkit.event.entity.EntityPickupItemEvent
 class ItemGathering: Event {
     override fun register() {
         onPickup.register()
+        onClick.register()
     }
 
     override fun unregister() {
         onPickup.unregister()
+        onClick.unregister()
     }
 
     private val onPickup = listen<EntityPickupItemEvent> {
         if (ForceManager.currentGoal == it.item.type.name) {
             ForceManager.next()
         }
+    }
+
+    private val onClick = listen<InventoryClickEvent> {
+        if (it.isCancelled) return@listen
+        if (ForceManager.currentGoal == it.currentItem.type.name) {
+            ForceManager.next()
+        } 
     }
 }
