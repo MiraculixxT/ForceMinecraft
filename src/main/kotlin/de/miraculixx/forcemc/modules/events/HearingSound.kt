@@ -14,5 +14,13 @@ class HearingSound: Event {
 
     private val onEntityDamage = listen<EntityDamageEvent> {
         // Entity Damage & Entity Death 
+        val key = it.entity.sound
+    }
+
+
+    private fun checkKey(key: String) {
+        if (key == ForceManager.currentGoal) {
+            ForceManager.next()
+        }
     }
 }
