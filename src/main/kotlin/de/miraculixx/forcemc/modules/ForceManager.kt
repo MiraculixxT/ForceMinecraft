@@ -4,6 +4,7 @@ import de.miraculixx.forcemc.modules.data.Event
 import de.miraculixx.forcemc.modules.data.JsonFormat
 import de.miraculixx.forcemc.modules.data.ProgressSave
 import de.miraculixx.forcemc.modules.data.SearchType
+import de.miraculixx.forcemc.modules.display.BossBar
 import de.miraculixx.forcemc.modules.events.GrantAdvancement
 import de.miraculixx.forcemc.modules.events.HearingSound
 import de.miraculixx.forcemc.modules.events.ItemGathering
@@ -29,6 +30,8 @@ object ForceManager {
     val advancements = ProgressSave<Advancement>()
     val sounds = ProgressSave<Sound>()
 
+    var bossBar: BossBar? = null
+
     var currentGoal = "error"
     var currentEvent: Event? = null
     var currentType = SearchType.NOTHING
@@ -36,26 +39,10 @@ object ForceManager {
     fun next() {
         currentEvent?.unregister()
         when (currentType) {
-            SearchType.ITEM -> {
-                val value = Material.valueOf(currentGoal)
-                items.remaining.remove(value)
-                items.finished.add(value)
-            }
-            SearchType.MOB -> {
-                val value = EntityType.valueOf(currentGoal)
-                mobs.remaining.remove(value)
-                mobs.finished.add(value)
-            }
-            SearchType.ADVANCEMENT -> {
-                val value = Bukkit.getAdvancement(NamespacedKey("minecraft", currentGoal)) ?: return
-                advancements.remaining.remove(value)
-                advancements.finished.add(value)
-            }
-            SearchType.SOUND -> {
-                val value = Sound.valueOf(currentGoal)
-                sounds.remaining.remove(value)
-                sounds.finished.add(value)
-            }
+            SearchType.ITEM -> items.addFinished(Material.valueOf(currentGoal))
+            SearchType.MOB -> mobs.addFinished(EntityType.valueOf(currentGoal))
+            SearchType.ADVANCEMENT -> advancements.addFinished(Bukkit.getAdvancement(NamespacedKey("minecraft", currentGoal)) ?: return)
+            SearchType.SOUND -> sounds.addFinished(Sound.valueOf(currentGoal))
             SearchType.NOTHING -> {}
         }
         val finishedTypes = buildList {
@@ -82,7 +69,7 @@ object ForceManager {
                 currentEvent = HearingSound()
                 sounds.remaining.random().name
             }
-            SearchType.NOTHING -> { "error" }
+            SearchType.NOTHING -> "error"
         }
     }
 
@@ -95,6 +82,7 @@ object ForceManager {
             SearchType.SOUND -> HearingSound()
             SearchType.NOTHING -> return false
         } else return false
+        bossBar = BossBar()
         return true
     }
 
