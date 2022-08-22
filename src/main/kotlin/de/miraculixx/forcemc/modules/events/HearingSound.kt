@@ -18,7 +18,12 @@ class HearingSound: Event {
 
     private val onEntityDamage = listen<EntityDamageEvent> {
         // Entity Damage & Entity Death 
-        val key = it.entity
+        val name = it.entity.type.name
+        checkKey("ENTITY_$name_HIT")
+        val lv = it.entity as? LivingEntity ?: return@listen
+        if ((it.entity.health - it.finalDamage) <= 0.0) {
+            checkKey("ENTITY_$name_DEATH")
+        }
     }
 
 
