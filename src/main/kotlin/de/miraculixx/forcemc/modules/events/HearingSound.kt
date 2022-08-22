@@ -5,16 +5,21 @@ import net.axay.kspigot.event.listen
 
 class HearingSound: Event {
     override fun register() {
-        onAdvancement.register()
+        onEntityDamage.register()
     }
 
     override fun unregister() {
-        onAdvancement.unregister()
+        onEntityDamage.unregister()
     }
 
     private val onEntityDamage = listen<EntityDamageEvent> {
         // Entity Damage & Entity Death 
-        val key = it.entity.sound
+        val name = it.entity.type.name
+        checkKey("ENTITY_$name_HIT")
+        val lv = it.entity as? LivingEntity ?: return@listen
+        if ((it.entity.health - it.finalDamage) <= 0.0) {
+            checkKey("ENTITY_$name_DEATH")
+        }
     }
 
 
