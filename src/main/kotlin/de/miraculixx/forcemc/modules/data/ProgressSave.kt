@@ -9,4 +9,8 @@ data class ProgressSave<T>(val remaining: MutableList<T> = mutableListOf(), val 
         remaining.remove(obj)
         finished.add(obj)
     }
+    fun addFinished(obj: List<T>) {
+        remaining.removeAll(obj)
+        finished.addAll(obj)
+    }
 }

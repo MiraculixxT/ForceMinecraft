@@ -1,12 +1,14 @@
 package de.miraculixx.forcemc.modules.display
 
-fun fancy(s: String): String {
+fun String.fancy(): String {
     return buildString {
-        s.forEachIndexed { index, c ->
+        this@fancy.lowercase().forEachIndexed { index, c ->
             when {
                 index == 0 -> append(c.uppercase())
                 c == '_' -> append(' ')
-                s[(index - 1).coerceIn(s.indices)] == ' ' -> append(c.uppercase())
+                this@fancy[(index - 1).coerceIn(this@fancy.indices)] == '_' -> append(c.uppercase())
+
+                else -> append(c)
             }
         }
     }

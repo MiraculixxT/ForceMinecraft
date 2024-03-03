@@ -1,18 +1,27 @@
 package de.miraculixx.forcemc.modules
 
-import de.miraculixx.forcemc.modules.data.Event
-import de.miraculixx.forcemc.modules.data.JsonFormat
-import de.miraculixx.forcemc.modules.data.ProgressSave
-import de.miraculixx.forcemc.modules.data.SearchType
+import de.miraculixx.forcemc.Manager
+import de.miraculixx.forcemc.modules.data.*
 import de.miraculixx.forcemc.modules.display.BossBar
+import de.miraculixx.forcemc.modules.display.ToastNotification
+import de.miraculixx.forcemc.modules.display.fancy
+import de.miraculixx.forcemc.modules.display.toItem
 import de.miraculixx.forcemc.modules.events.GrantAdvancement
 import de.miraculixx.forcemc.modules.events.HearingSound
 import de.miraculixx.forcemc.modules.events.ItemGathering
 import de.miraculixx.forcemc.modules.events.MobKill
+import de.miraculixx.forcemc.utils.cError
+import de.miraculixx.forcemc.utils.cmp
+import de.miraculixx.forcemc.utils.plus
+import de.miraculixx.forcemc.utils.prefix
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.axay.kspigot.extensions.broadcast
 import net.axay.kspigot.extensions.console
+import net.axay.kspigot.extensions.onlinePlayers
+import net.axay.kspigot.runnables.taskRunLater
+import net.minecraft.advancements.FrameType
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -51,25 +60,71 @@ object ForceManager {
             if (advancements.remaining.isEmpty()) add(SearchType.ADVANCEMENT)
             if (sounds.remaining.isEmpty()) add(SearchType.SOUND)
         }
-        currentType = SearchType.values().filter { !finishedTypes.contains(it) }.random()
+        currentType = SearchType.values().filter { !finishedTypes.contains(it) && it != SearchType.NOTHING }.random()
         currentGoal = when (currentType) {
             SearchType.ITEM -> {
                 currentEvent = ItemGathering()
                 items.remaining.random().name
             }
+
             SearchType.MOB -> {
                 currentEvent = MobKill()
                 mobs.remaining.random().name
             }
+
             SearchType.ADVANCEMENT -> {
                 currentEvent = GrantAdvancement()
                 advancements.remaining.random().key.key
             }
+
             SearchType.SOUND -> {
                 currentEvent = HearingSound()
                 sounds.remaining.random().name
             }
+
             SearchType.NOTHING -> "error"
+        }
+        bossBar?.update(true)
+        taskRunLater(90) { checkPresent() }
+    }
+
+    private fun checkPresent() {
+        when (currentType) {
+            SearchType.ITEM -> {
+                val material = toItem(currentGoal, SearchType.ITEM)
+                onlinePlayers.forEach { player ->
+                    if (player.inventory.contains(material)) {
+                        ToastNotification("Item In Inventory: ${currentGoal.fancy()}", toItem(currentGoal, SearchType.ITEM), "Force Minecraft by Miraculixx", FrameType.GOAL).broadcast()
+                        next()
+                        return
+                    }
+                }
+            }
+
+            SearchType.ADVANCEMENT -> {
+                val key = NamespacedKey.fromString(currentGoal)!!
+                val adv = Bukkit.getAdvancement(key)
+                if (adv == null) {
+                    broadcast(prefix + cmp("Something went wrong... (Error Code: 3)", cError))
+                    broadcast(prefix + cmp("Use /skip if the current task is already finished or impossible", cError))
+                    console.sendMessage(prefix + cmp("Key: $currentGoal (${key.asString()})"))
+                    return
+                }
+                onlinePlayers.forEach { player ->
+                    if (player.getAdvancementProgress(adv).isDone) {
+                        ToastNotification(
+                            "Advancement Already Done: ${currentGoal.replace("/", "_-_").fancy()}",
+                            toItem(currentGoal, SearchType.ADVANCEMENT),
+                            "Force Minecraft by Miraculixx",
+                            FrameType.GOAL
+                        ).broadcast()
+                        next()
+                        return
+                    }
+                }
+            }
+
+            else -> {}
         }
     }
 
@@ -86,11 +141,18 @@ object ForceManager {
         return true
     }
 
+    fun shutdown() {
+        bossBar?.shutdown()
+        val file = File(Manager.dataFolder.path + "//history.json")
+        val sb = Json.encodeToString(JsonFormat(items.finished, mobs.finished, advancements.finished, sounds.finished))
+        file.writeText(sb)
+        console.sendMessage("Saved history to file (${sb.length / 1000} kb)")
+    }
+
     fun fill() {
         items.remaining.addAll(
             Material.values().filter {
-                (it.creativeCategory != null && it != Material.DRAGON_HEAD) ||
-                        it != Material.PLAYER_HEAD
+                (it.isItem && (it.creativeCategory != null) && it != Material.PLAYER_HEAD && !it.name.contains("SPAWN_EGG")) || it == Material.DRAGON_HEAD
             }
         )
         mobs.remaining.addAll(
@@ -101,21 +163,17 @@ object ForceManager {
         Bukkit.advancementIterator().forEach { adv ->
             if (!adv.key.key.startsWith("recipes")) advancements.remaining.add(adv)
         }
-        sounds.remaining.addAll(Sound.values().filter {
-            it != Sound.ENCHANT_THORNS_HIT &&
-                    it != Sound.EVENT_RAID_HORN &&
-                    it != Sound.PARTICLE_SOUL_ESCAPE &&
-                    it != Sound.UI_BUTTON_CLICK &&
-                    it != Sound.UI_TOAST_IN &&
-                    it != Sound.UI_TOAST_OUT &&
-                    it != Sound.UI_TOAST_CHALLENGE_COMPLETE &&
-                    !it.key.key.startsWith("music.")
-        })
+
+        val inv = Invalidating()
+        val allSounds = inv.filterInvalidSounds(Sound.values().toList())
+        allSounds.removeAll(inv.getInvalidSounds())
+        sounds.remaining.addAll(allSounds)
     }
 
     private fun filter() {
-        val file = File(Path("MUtils/history.json").toAbsolutePath().toString())
+        val file = File(Manager.dataFolder.path + "//history.json")
         if (!file.exists()) {
+            Manager.dataFolder.mkdirs()
             file.createNewFile()
             file.writeText(Json.encodeToString(JsonFormat(emptyList(), emptyList(), emptyList(), emptyList())))
             console.sendMessage("No history data found! `history.json` created for further use")
@@ -123,14 +181,10 @@ object ForceManager {
             val input = file.readText()
             console.sendMessage("History data found! Loading ${file.length() / 1000.0}kb...")
             val data = Json.decodeFromString<JsonFormat>(input)
-            items.finished.addAll(data.items)
-            items.remaining.removeAll(data.items)
-            mobs.finished.addAll(data.mobs)
-            mobs.remaining.removeAll(data.mobs)
-            advancements.finished.addAll(data.advancements)
-            advancements.remaining.removeAll(data.advancements)
-            sounds.finished.addAll(data.sounds)
-            sounds.remaining.removeAll(data.sounds)
+            items.addFinished(data.items)
+            mobs.addFinished(data.mobs)
+            advancements.addFinished(data.advancements)
+            sounds.addFinished(data.sounds)
             console.sendMessage("§aSuccessfully load history!")
         }
     }

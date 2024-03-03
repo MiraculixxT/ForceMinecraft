@@ -13,12 +13,13 @@ repositories {
         name = "sonatype-oss-snapshots"
     }
     mavenCentral()
+    maven(url = "https://repo.dmulloy2.net/repository/public/")
 }
 
 dependencies {
     paperDevBundle("1.19.2-R0.1-SNAPSHOT")
     implementation("net.axay:kspigot:1.19.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.0")
     //implementation("net.kyori:adventure-text-serializer-plain:4.11.0")
 }
 
